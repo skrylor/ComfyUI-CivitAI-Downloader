@@ -4,18 +4,15 @@
 
 An interactive command-line tool to easily download models from CivitAI and automatically organize them in your ComfyUI folders structure.
 
-![Preview](https://i.imgur.com/example.png)
 
 ## Features
 
-- 🚀 **Interactive Mode**: Browse and select versions and files through a friendly CLI
-- 📦 **Automatic Organization**: Places models in the correct ComfyUI folders based on model type
-- 🔍 **Smart Model Type Detection**: Automatically detects model types (Checkpoint, LORA, VAE, etc.)
-- 📋 **Version Management**: Lists all versions of a model for you to choose from
-- 📊 **Beautiful Progress Bar**: Shows download progress with ETA and speed
-- 📂 **Multiple File Support**: Handles models with multiple file options
-- 🔒 **Secure API Key Management**: Safely stores your CivitAI API key in a config file
-- 🔄 **Resumable Downloads**: Can resume interrupted downloads where possible
+-  **Interactive Mode**: Browse and select versions and files through a friendly CLI
+-  **Automatic Organization**: Places models in the correct ComfyUI folders based on model type
+-  **Smart Model Type Detection**: Automatically detects model types (Checkpoint, LORA, VAE, etc.)
+-  **Version Management**: Lists all versions of a model for you to choose from
+-  **Multiple File Support**: Handles models with multiple file options
+-  **Resumable Downloads**: Can resume interrupted downloads where possible
 
 ## Installation
 
@@ -135,13 +132,9 @@ Supported model types:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Author
 
-Created by [Skrylor](https://github.com/Skrylor)
+Created by [Skrylor](https://github.com/skrylor)
 
 ---
 
