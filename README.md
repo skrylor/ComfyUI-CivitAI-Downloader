@@ -1,6 +1,6 @@
 # ComfyUI CivitAI Model Downloader
 
-[![GitHub license](https://img.shields.io/github/license/Skrylor/comfyui-civitai-downloader)](https://github.com/Skrylor/comfyui-civitai-downloader/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/Skrylor/comfyui-civitai-downloader)](https://github.com/skrylor/ComfyUI-CivitAI-Downloader/edit/main/README.md)
 
 An interactive command-line tool to easily download models from CivitAI and automatically organize them in your ComfyUI folders structure.
 
