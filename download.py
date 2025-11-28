@@ -276,13 +276,21 @@ def get_args():
 
 
 def get_token():
-    """Get API token from config file"""
+    """Get API token from env var or config file"""
+    # Check environment variable first
+    if os.environ.get('CIVITAI_API_TOKEN'):
+        return os.environ.get('CIVITAI_API_TOKEN')
+        
     config = get_config()
     return config.get('api_key', '')
 
 
 def get_comfyui_path():
-    """Get ComfyUI path from config file"""
+    """Get ComfyUI path from env var or config file"""
+    # Check environment variable first
+    if os.environ.get('COMFYUI_PATH'):
+        return os.environ.get('COMFYUI_PATH')
+        
     config = get_config()
     return config.get('comfyui_path', str(Path.home() / 'ComfyUI'))
 
@@ -469,6 +477,35 @@ def check_generation_only(version):
     return False
 
 
+def check_file_exists(filename, model_type):
+    """Check if a file exists in the expected folder"""
+    comfyui_path = get_comfyui_path()
+    model_metadata = {'type': model_type} if model_type else None
+    file_type = detect_model_type(filename, model_metadata)
+    folder = get_model_folder(file_type)
+    path = Path(comfyui_path) / folder / filename
+    return path.exists()
+
+def get_installed_status(version, model_type):
+    """Check how many files of a version are installed"""
+    files = version.get('files', [])
+    if not files:
+        return 0, 0
+        
+    installed_count = 0
+    total_count = len(files)
+    
+    for file in files:
+        filename = file.get('name')
+        if not filename:
+            continue
+            
+        if check_file_exists(filename, model_type):
+            installed_count += 1
+            
+    return installed_count, total_count
+
+
 def display_versions(model_info, interactive=True):
     """Display available versions and let user select one"""
     if not model_info or 'modelVersions' not in model_info:
@@ -476,6 +513,7 @@ def display_versions(model_info, interactive=True):
         return None
     
     versions = model_info['modelVersions']
+    model_type = model_info.get('type', 'Checkpoint')
     
     # Sort versions by their creation date (newest first)
     versions.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
@@ -487,7 +525,7 @@ def display_versions(model_info, interactive=True):
     
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("#", style="dim", width=4)
-    table.add_column("Status", width=12)
+    table.add_column("Status", width=15)
     table.add_column("Name")
     table.add_column("Files")
     table.add_column("Downloads")
@@ -521,11 +559,16 @@ def display_versions(model_info, interactive=True):
         
         # Determine status
         is_gen_only = check_generation_only(version)
+        installed_count, total_count = get_installed_status(version, model_type)
         
-        if is_gen_only:
+        if installed_count == total_count and total_count > 0:
+            status = "[green]Installed[/green]"
+        elif installed_count > 0:
+            status = f"[yellow]Partial ({installed_count}/{total_count})[/yellow]"
+        elif is_gen_only:
             status = "[red]Gen-Only[/red]"
         elif version.get('baseModelType'):
-            status = "[green]Base[/green]"
+            status = "[blue]Base[/blue]"
         else:
             status = "[dim]Other[/dim]"
         
@@ -570,10 +613,37 @@ def display_versions(model_info, interactive=True):
             sys.exit(0)
 
 
-def select_file(files, interactive=True):
+def select_file(files, interactive=True, filter_str=None, model_type=None):
     """If multiple files exist, let user select which to download"""
     if not files:
         return None
+    
+    # If a filter is provided, try to find matching files
+    if filter_str:
+        filter_str = str(filter_str).lower()
+        matches = []
+        
+        # Try to match by ID first
+        if filter_str.isdigit():
+            file_id = int(filter_str)
+            for file in files:
+                if file.get('id') == file_id:
+                    matches.append(file)
+        
+        # If no ID match, try name or type
+        if not matches:
+            for file in files:
+                if filter_str in file.get('name', '').lower():
+                    matches.append(file)
+                elif filter_str in file.get('type', '').lower():
+                    matches.append(file)
+        
+        if matches:
+            console.print(f"[green]Found {len(matches)} file(s) matching '{filter_str}'[/green]")
+            return matches
+        else:
+            console.print(f"[yellow]No files found matching '{filter_str}'. Falling back to default selection.[/yellow]")
+            # Fall through to default selection logic
     
     if len(files) == 1:
         return [files[0]]
@@ -590,6 +660,7 @@ def select_file(files, interactive=True):
     
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("#", style="dim", width=4)
+    table.add_column("Status", width=10)
     table.add_column("Name")
     table.add_column("Size")
     table.add_column("Type")
@@ -606,7 +677,12 @@ def select_file(files, interactive=True):
         file_type = file.get('type', 'Unknown')
         format_type = file.get('format', 'Unknown')
         
-        table.add_row(str(i+1), name, size_str, file_type, format_type)
+        # Check if file exists
+        status = ""
+        if check_file_exists(name, model_type):
+            status = "[green]Installed[/green]"
+        
+        table.add_row(str(i+1), status, name, size_str, file_type, format_type)
     
     console.print(table)
     console.print("[dim]Tip: You can select multiple files by separating numbers with commas (e.g. 1,2)[/dim]")
@@ -666,7 +742,7 @@ def find_version_by_name(versions, version_name):
     return None
 
 
-def download_file(url: str, output_path: str, token: str, force=False, version_name=None, interactive=True):
+def download_file(url: str, output_path: str, token: str, force=False, version_name=None, file_filter=None, interactive=True):
     headers = {
         'Authorization': f'Bearer {token}',
         'User-Agent': USER_AGENT,
@@ -723,8 +799,15 @@ def download_file(url: str, output_path: str, token: str, force=False, version_n
                 console.print(f"[red]Error: No files found for version {selected_version['name']}[/red]")
                 continue
             
+            # Get model metadata for better folder placement
+            model_metadata = None
+            if model_info:
+                model_metadata = {
+                    'type': model_info.get('type', 'Checkpoint')
+                }
+
             # Select file if multiple exist
-            selected_files = select_file(selected_version['files'], interactive)
+            selected_files = select_file(selected_version['files'], interactive, file_filter, model_metadata.get('type') if model_metadata else None)
             if not selected_files:
                 console.print("[yellow]Download canceled for this version.[/yellow]")
                 continue
@@ -814,13 +897,6 @@ def download_file(url: str, output_path: str, token: str, force=False, version_n
                     console.print("[red]Failed to get download information[/red]")
                     continue
 
-                # Get model metadata for better folder placement
-                model_metadata = None
-                if model_info and selected_version:
-                    model_metadata = {
-                        'type': model_info.get('type', 'Checkpoint')
-                    }
-
                 # Detect model type and determine the appropriate folder
                 model_type = detect_model_type(filename, model_metadata)
                 model_folder = get_model_folder(model_type)
@@ -840,7 +916,26 @@ def download_file(url: str, output_path: str, token: str, force=False, version_n
                 # Check if file already exists
                 if os.path.exists(output_file) and not force:
                     console.print(f"[yellow]File already exists: {output_file}[/yellow]")
-                    if not Confirm.ask("Overwrite?"):
+                    
+                    # Verify hash if available
+                    if 'hashes' in selected_file and 'SHA256' in selected_file['hashes']:
+                        expected_hash = selected_file['hashes']['SHA256'].upper()
+                        console.print("[cyan]Verifying existing file hash...[/cyan]")
+                        try:
+                            calculated_hash = calculate_sha256(output_file)
+                            if calculated_hash == expected_hash:
+                                console.print("[bold green]File verified! Hashes match. Skipping download.[/bold green]")
+                                download_success = True
+                                continue
+                            else:
+                                console.print(f"[bold red]Hash mismatch![/bold red]")
+                                console.print(f"Expected: {expected_hash}")
+                                console.print(f"Got:      {calculated_hash}")
+                                console.print("[yellow]The existing file might be outdated or corrupted.[/yellow]")
+                        except Exception as e:
+                            console.print(f"[red]Error verifying hash: {e}[/red]")
+                    
+                    if not Confirm.ask("Overwrite existing file?"):
                         console.print("[yellow]Download canceled.[/yellow]")
                         continue
                 
@@ -1028,6 +1123,7 @@ def interactive_mode():
                 # Display search results
                 table = Table(show_header=True, header_style="bold magenta")
                 table.add_column("#", style="dim", width=4)
+                table.add_column("Status", width=10)
                 table.add_column("Name")
                 table.add_column("Type")
                 table.add_column("Creator")
@@ -1039,7 +1135,18 @@ def interactive_mode():
                     creator = model.get('creator', {}).get('username', 'Unknown')
                     downloads = model.get('stats', {}).get('downloadCount', 0)
                     
-                    table.add_row(str(i+1), name, m_type, creator, f"{downloads:,}")
+                    # Check if any version is installed
+                    is_installed = False
+                    if 'modelVersions' in model:
+                        for version in model['modelVersions']:
+                            installed_count, _ = get_installed_status(version, m_type)
+                            if installed_count > 0:
+                                is_installed = True
+                                break
+                    
+                    status = "[green]Installed[/green]" if is_installed else ""
+                    
+                    table.add_row(str(i+1), status, name, m_type, creator, f"{downloads:,}")
                 
                 console.print(table)
                 
@@ -1091,26 +1198,61 @@ def process_batch_config(batch_file, token, force):
         
     try:
         with open(batch_file, 'r') as f:
-            config = yaml.safe_load(f)
+            batch_data = yaml.safe_load(f)
             
-        if not config or 'models' not in config:
+        if not batch_data:
+            console.print(f"[red]Invalid batch file format.[/red]")
+            return
+
+        # Process global configuration overrides
+        if 'config' in batch_data:
+            config_section = batch_data['config']
+            
+            # Override ComfyUI Path
+            if 'comfyui_path' in config_section:
+                os.environ['COMFYUI_PATH'] = str(config_section['comfyui_path'])
+                console.print(f"[dim]Config: Overriding ComfyUI path to {os.environ['COMFYUI_PATH']}[/dim]")
+            
+            # Override Token (if not provided via CLI)
+            if 'token' in config_section and not token:
+                token = str(config_section['token'])
+                console.print(f"[dim]Config: Using API token from batch file[/dim]")
+                
+            # Override Force (if not provided via CLI)
+            if 'force' in config_section:
+                # If CLI force is False, allow config to set it to True
+                if not force:
+                    force = bool(config_section['force'])
+                    if force:
+                        console.print(f"[dim]Config: Force download enabled[/dim]")
+
+            # Override Model Folders
+            if 'model_paths' in config_section:
+                for m_type, m_path in config_section['model_paths'].items():
+                    if m_type in MODEL_FOLDERS:
+                        MODEL_FOLDERS[m_type] = str(m_path)
+                        console.print(f"[dim]Config: Remapped {m_type} -> {m_path}[/dim]")
+
+        if 'models' not in batch_data:
             console.print(f"[red]Invalid batch file format. Missing 'models' list.[/red]")
             return
             
         console.print(f"\n[bold green]Starting batch download from {batch_file}[/bold green]")
-        console.print(f"Found {len(config['models'])} models to process.")
+        console.print(f"Found {len(batch_data['models'])} models to process.")
         
-        for i, item in enumerate(config['models']):
-            console.print(f"\n[bold cyan][{i+1}/{len(config['models'])}] Processing item...[/bold cyan]")
+        for i, item in enumerate(batch_data['models']):
+            console.print(f"\n[bold cyan][{i+1}/{len(batch_data['models'])}] Processing item...[/bold cyan]")
             
             url = None
             version = None
+            file_filter = None
             
             if isinstance(item, str) or isinstance(item, int):
                 url = str(item)
             elif isinstance(item, dict):
                 url = str(item.get('id') or item.get('url'))
                 version = item.get('version')
+                file_filter = item.get('file')
             
             if not url:
                 console.print(f"[yellow]Skipping invalid item: {item}[/yellow]")
@@ -1121,7 +1263,7 @@ def process_batch_config(batch_file, token, force):
                 url = url[1:]
                 
             try:
-                download_file(url, None, token, force, version, interactive=False)
+                download_file(url, None, token, force, version, file_filter, interactive=False)
             except Exception as e:
                 console.print(f"[red]Error downloading {url}: {e}[/red]")
                 

@@ -1,167 +1,101 @@
-# ComfyUI CivitAI Model Downloader
+# ComfyUI CivitAI Downloader
 
-[![GitHub license](https://img.shields.io/github/license/skrylor/ComfyUI-CivitAI-Downloader)](https://github.com/skrylor/ComfyUI-CivitAI-Downloader/blob/main/LICENSE)
-
-An interactive command-line tool to easily download models from CivitAI and automatically organize them in your ComfyUI folders structure.
-
+A CLI tool to download models from CivitAI and automatically organize them into your ComfyUI folder structure.
 
 ## Features
 
--  **Interactive Mode**: Browse, search, and select versions/files through a friendly CLI
--  **Search Functionality**: Search for models directly from the tool by typing keywords
--  **Automatic Organization**: Places models in the correct ComfyUI folders based on model type
--  **Smart Model Type Detection**: Automatically detects model types (Checkpoint, LORA, VAE, etc.)
--  **Version Management**: Lists all versions of a model for you to choose from
--  **Multiple File Support**: Handles models with multiple file options
--  **Resumable Downloads**: Automatically resumes interrupted downloads
--  **Hash Verification**: Verifies file integrity using SHA256 after download
--  **Batch Downloading**: Download multiple models at once using a YAML config file
--  **Multi-Selection**: Select multiple versions or files to download in one go
--  **Gen-Only Detection**: Warns you about "Generation-Only" models that cannot be downloaded
+- **Smart Organization**: Automatically detects model types (Checkpoint, LoRA, VAE, etc.) and places them in the correct ComfyUI folders.
+- **Installation Detection**: Visual indicators show if a model or specific file is already installed.
+- **Smart Hash Verification**: Verifies existing files against CivitAI hashes to skip unnecessary downloads.
+- **Interactive & Search**: Search for models by name or paste URLs/IDs directly.
+- **Batch Processing**: Download multiple models via YAML configuration.
+- **Resumable**: Supports resuming interrupted downloads.
+- **Serverless Ready**: Configurable via Environment Variables or embedded YAML config.
+
+## Smart File Management
+
+The tool helps you manage your library efficiently:
+- **Status Indicators**: Shows `[Installed]` or `[Partial]` next to versions and files you already have.
+- **Duplicate Prevention**: If a file already exists, it calculates the SHA256 hash. If it matches the server's hash, the download is skipped automatically.
+- **Update Checks**: If the hash doesn't match (e.g., you have an old version or corrupted file), it prompts you to overwrite.
+
+## Smart Folder Organization
+
+The tool automatically detects the model type and downloads it to the appropriate folder in your ComfyUI installation:
+
+| Model Type | Target Folder |
+|------------|---------------|
+| Checkpoint | `models/checkpoints/` |
+| LoRA / LoCon | `models/loras/` |
+| VAE | `models/vae/` |
+| ControlNet | `models/controlnet/` |
+| Upscaler | `models/upscale_models/` |
+| Embedding | `models/embeddings/` |
+| Workflow | `models/workflows/` |
+
+*Note: You can customize these paths in the batch configuration file.*
 
 ## Installation
 
-### Prerequisites
-- Python 3.6 or higher
-- A CivitAI account and API key ([Get one here](https://civitai.com/user/account))
-- A ComfyUI installation
+Requires Python 3.6+.
 
-### Quick Install
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/Skrylor/comfyui-civitai-downloader.git
-   cd comfyui-civitai-downloader
-   ```
-
-2. Make the scripts executable:
-   ```bash
-   chmod +x download.py
-   chmod +x download_model.sh
-   ```
-
-3. Run the script for the first time to set up configuration:
-   ```bash
-   ./download.py
-   ```
-   You'll be prompted to enter your CivitAI API key and ComfyUI path.
+```bash
+git clone https://github.com/Skrylor/comfyui-civitai-downloader.git
+cd comfyui-civitai-downloader
+pip install -r requirements.txt
+```
 
 ## Usage
 
-### Interactive Mode (Recommended)
-
-Simply run:
+### Interactive Mode
+Run without arguments to search or enter URLs interactively:
 ```bash
-./download.py
+python download.py
 ```
 
-This will start the interactive mode where you can:
-- Paste a CivitAI model URL
-- Enter a Model ID
-- **Type a search query** (e.g., "dreamshaper", "pony") to find models
-
-### Command Line Options
-
+### CLI Mode
+Download by URL or ID:
 ```bash
-./download.py [URL or ID] [options]
+python download.py https://civitai.com/models/12345
+python download.py 12345 --version "v1.0"
 ```
 
-For example:
-```bash
-./download.py https://civitai.com/models/140272/hassaku-xl-illustrious
-```
+**Options:**
+- `-o PATH`: Custom output path.
+- `-t TOKEN`: CivitAI API token.
+- `-f`: Force overwrite.
+- `--batch-file FILE`: Run in batch mode.
 
-Or using just the model ID:
-```bash
-./download.py 140272
-```
+### Batch & Automation
 
-### Options
-
-```
--o, --output_path PATH   Custom output path
--t, --token TOKEN        CivitAI API token (overrides config file)
--f, --force              Force download even if file exists
---model_type TYPE        Manually specify model type
--i, --interactive        Interactive mode
--v, --version VERSION    Specify version to download (e.g., "v2.2" or "latest")
---batch-file FILE        Path to a YAML file containing a list of models to download
---reset-config           Reset configuration (API key and ComfyUI path)
-```
-
-### Batch Downloading
-
-You can download multiple models at once by creating a YAML file (e.g., `batch.yaml`):
+Create a `batch.yaml` file to define environment settings and a list of models. This is useful for restoring environments (e.g., Vast.ai).
 
 ```yaml
+config:
+  comfyui_path: /workspace/ComfyUI
+  token: your_api_token
+  model_paths:
+    LORA: models/my_loras
+
 models:
   - https://civitai.com/models/12345
   - id: 67890
     version: v1.0
-  - 112233
+  - id: 1656375
+    file: workflow_KJ.zip  # Select specific file by name or ID
 ```
 
-Then run:
+Run the batch:
 ```bash
-./download.py --batch-file batch.yaml
+python download.py --batch-file batch.yaml
 ```
 
-### Shell Script Shortcut
+### Configuration
 
-For even quicker usage, a shell script is provided:
-```bash
-./download_model.sh https://civitai.com/models/140272
-```
+The tool will prompt for your API Key and ComfyUI path on first run, saving them to `~/.comfyui-civitai/config.ini`.
 
-## Configuration
+**Environment Variables:**
+Override config settings using `CIVITAI_API_TOKEN` and `COMFYUI_PATH`.
 
-On first run, the script will ask for:
-1. Your CivitAI API key
-2. The path to your ComfyUI installation
-
-These settings are stored in `~/.comfyui-civitai/config.ini` and can be edited manually or reset using:
-```bash
-./download.py --reset-config
-```
-
-## Model Type Detection
-
-The script automatically detects what type of model you're downloading (Checkpoint, LORA, VAE, etc.) and places it in the appropriate folder within your ComfyUI installation.
-
-Supported model types:
-- Checkpoints → `models/checkpoints/`
-- LORAs → `models/loras/`
-- Controlnet → `models/controlnet/`
-- VAEs → `models/vae/`
-- Upscalers → `models/upscale_models/`
-- Embeddings → `models/embeddings/`
-- And more!
-
-## Examples
-
-### Download a specific version of a model:
-```bash
-./download.py https://civitai.com/models/140272 -v "v2.2"
-```
-
-### Force redownload of a model:
-```bash
-./download.py 140272 -f
-```
-
-### Specify a custom output path:
-```bash
-./download.py 140272 -o /path/to/custom/folder
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Author
-
-Created by [Skrylor](https://github.com/skrylor)
-
----
-
-⭐ If you find this tool useful, please star the repository! ⭐ 
+## License
+[MIT](LICENSE)

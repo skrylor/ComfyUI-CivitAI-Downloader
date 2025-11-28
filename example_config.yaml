@@ -1,11 +1,32 @@
 # Example configuration for batch downloading
+# You can use this file with: python download.py --batch-file example_config.yaml
+
+# Optional: Global configuration overrides
+# These settings are useful for serverless environments or specific project setups.
+config:
+  # Override the default ComfyUI path
+  # comfyui_path: /workspace/ComfyUI
+  
+  # Provide API token directly (or use CIVITAI_API_TOKEN env var)
+  # token: your_civitai_api_token
+  
+  # Force download even if file exists
+  # force: false
+  
+  # Custom folder mapping for specific model types
+  # model_paths:
+  #   LORA: models/my_loras
+  #   Checkpoint: models/sdxl_checkpoints
+
 models:
-  # You can specify just the model ID or URL
+  # Simple usage: just the model ID or URL
   - 12345
   - https://civitai.com/models/67890
   
-  # Or you can specify more details
-  - id: 112233
+  # Advanced usage: specify version and specific file
+  - id: 1656375
     version: v1.0
+    file: workflow_KJ.zip  # Download a specific file (by name or ID)
+    
   - url: https://civitai.com/models/445566
     version: latest
