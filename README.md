@@ -7,12 +7,17 @@ An interactive command-line tool to easily download models from CivitAI and auto
 
 ## Features
 
--  **Interactive Mode**: Browse and select versions and files through a friendly CLI
+-  **Interactive Mode**: Browse, search, and select versions/files through a friendly CLI
+-  **Search Functionality**: Search for models directly from the tool by typing keywords
 -  **Automatic Organization**: Places models in the correct ComfyUI folders based on model type
 -  **Smart Model Type Detection**: Automatically detects model types (Checkpoint, LORA, VAE, etc.)
 -  **Version Management**: Lists all versions of a model for you to choose from
 -  **Multiple File Support**: Handles models with multiple file options
--  **Resumable Downloads**: Can resume interrupted downloads where possible
+-  **Resumable Downloads**: Automatically resumes interrupted downloads
+-  **Hash Verification**: Verifies file integrity using SHA256 after download
+-  **Batch Downloading**: Download multiple models at once using a YAML config file
+-  **Multi-Selection**: Select multiple versions or files to download in one go
+-  **Gen-Only Detection**: Warns you about "Generation-Only" models that cannot be downloaded
 
 ## Installation
 
@@ -50,7 +55,10 @@ Simply run:
 ./download.py
 ```
 
-This will start the interactive mode where you can paste a CivitAI model URL or ID and follow the prompts.
+This will start the interactive mode where you can:
+- Paste a CivitAI model URL
+- Enter a Model ID
+- **Type a search query** (e.g., "dreamshaper", "pony") to find models
 
 ### Command Line Options
 
@@ -77,7 +85,25 @@ Or using just the model ID:
 --model_type TYPE        Manually specify model type
 -i, --interactive        Interactive mode
 -v, --version VERSION    Specify version to download (e.g., "v2.2" or "latest")
+--batch-file FILE        Path to a YAML file containing a list of models to download
 --reset-config           Reset configuration (API key and ComfyUI path)
+```
+
+### Batch Downloading
+
+You can download multiple models at once by creating a YAML file (e.g., `batch.yaml`):
+
+```yaml
+models:
+  - https://civitai.com/models/12345
+  - id: 67890
+    version: v1.0
+  - 112233
+```
+
+Then run:
+```bash
+./download.py --batch-file batch.yaml
 ```
 
 ### Shell Script Shortcut

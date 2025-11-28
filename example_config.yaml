@@ -1,0 +1,11 @@
+# Example configuration for batch downloading
+models:
+  # You can specify just the model ID or URL
+  - 12345
+  - https://civitai.com/models/67890
+  
+  # Or you can specify more details
+  - id: 112233
+    version: v1.0
+  - url: https://civitai.com/models/445566
+    version: latest
