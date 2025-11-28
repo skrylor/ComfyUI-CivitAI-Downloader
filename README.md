@@ -74,21 +74,40 @@ The tool automatically detects the model type and downloads it to the appropriat
 
 *Note: You can customize these paths in the batch configuration file.*
 
-## Installation
+## Installation & Quick Start
 
-Requires Python 3.6+.
+Requires Python 3.10+.
 
-```bash
-git clone https://github.com/Skrylor/comfyui-civitai-downloader.git
-cd comfyui-civitai-downloader
-pip install -r requirements.txt
-```
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/Skrylor/comfyui-civitai-downloader.git
+    cd comfyui-civitai-downloader
+    ```
+
+2.  **Run the starter script**:
+    *   **Windows**: Double-click `start.bat` or run `start.bat` in terminal.
+    *   **Linux/Mac**: Run `./start.sh`.
+
+    *These scripts will automatically check for Python and install required dependencies (`requirements.txt`) if missing.*
+
+    Alternatively, you can install manually:
+    ```bash
+    pip install -r requirements.txt
+    python download.py
+    ```
 
 ## Usage
 
 ### Interactive Mode
 Run without arguments to search or enter URLs interactively:
 ```bash
+# Windows
+start.bat
+
+# Linux/Mac
+./start.sh
+
+# Manual
 python download.py
 ```
 
