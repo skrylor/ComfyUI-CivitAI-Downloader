@@ -19,6 +19,45 @@ The tool helps you manage your library efficiently:
 - **Duplicate Prevention**: If a file already exists, it calculates the SHA256 hash. If it matches the server's hash, the download is skipped automatically.
 - **Update Checks**: If the hash doesn't match (e.g., you have an old version or corrupted file), it prompts you to overwrite.
 
+## Configuration & Files
+
+This tool is designed to be flexible. Here's what you need to know about the files:
+
+- **`download.py`**: The main script. **Required**.
+- **`requirements.txt`**: List of dependencies. **Required** for installation.
+- **`config.ini`**: Stores your API key and ComfyUI path. **Optional**.
+    - Automatically created in your home directory (`~/.comfyui-civitai/`) on first run.
+    - You can skip this by using Environment Variables (`CIVITAI_API_TOKEN`, `COMFYUI_PATH`) or a batch file.
+- **`batch.yaml`** (or any name): Your list of models to download. **Optional**.
+    - Highly recommended for serverless/cloud setups to define your environment.
+
+## Serverless / Vast.ai Workflow
+
+This tool is perfect for ephemeral environments like Vast.ai, RunPod, or Google Colab where you need to set up your workspace quickly.
+
+1.  **Prepare your `models.yaml`**:
+    Create a YAML file with all your favorite models (see `example_config.yaml`).
+    ```yaml
+    config:
+      comfyui_path: /workspace/ComfyUI
+    models:
+      - 12345 # Model ID
+      - https://civitai.com/models/67890
+    ```
+
+2.  **Upload & Run**:
+    Upload the script and your yaml file, then run:
+    ```bash
+    # Set token (securely)
+    export CIVITAI_API_TOKEN="your_token"
+    
+    # Install & Restore
+    pip install -r requirements.txt
+    python download.py --batch-file models.yaml
+    ```
+
+    *The tool will check hashes and only download files that are missing or changed.*
+
 ## Smart Folder Organization
 
 The tool automatically detects the model type and downloads it to the appropriate folder in your ComfyUI installation:
